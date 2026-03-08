@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>For You 💖</title>
+    
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Load React, ReactDOM, and Babel -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        function App() {
+          const [phase, setPhase] = useState('start'); 
+          const [noCount, setNoCount] = useState(0);
+          const audioRef = useRef(null);
+
+          const [sceneIndex, setSceneIndex] = useState(0);
+          const [visibleWordsCount, setVisibleWordsCount] = useState(0);
+
+          // --- CUSTOMIZATION OPTIONS ---
+          const audioUrl = "song.m4a"; 
+
+          // Image & GIF Assets
+          const boyImageUrl = "images/me.jpeg";
+          const girlImageUrl = "images/cutieee.jpeg";
+          const cherryBlossomImg = "https://images.unsplash.com/photo-1522383225653-ed111181a951?auto=format&fit=crop&w=400&q=80"; 
+          const holdingHandsGif = "images/IMG_2127.jpg"; 
+          const coupleGifUrl = "https://media.giphy.com/media/l4pTdcifPZLpDjL1e/giphy.gif"; 
+
+          // EXTENDED SCENES (Mapped to your exact lyrics & custom timings)
+           const lyricsScenes = [
+            {
+              type: 'scrapbook',
+              image: boyImageUrl,
+              words: ["With", "the", "beautiful", "girl", "that", "I", "met", "made", "in", "Japan"],
+              rotations: [-5, 8, -12, 10, -6, 15, -8, 5, -10, 12],
+              radius: 170,
+              polaroidRotation: -3,
+              highlightIndex: 9, // "Japan"
+              wordSpeed: 400,  // Speed of words appearing (milliseconds)
+              pauseAfter: 3500 // Pause before flipping page (milliseconds)
+            },
+            {
+              type: 'scrapbook',
+              image: girlImageUrl,
+              words: ["The", "beauty", "of", "her", "face", "was", "beyond", "my", "wildest", "dreams"],
+              rotations: [10, -5, 12, -8, 6, -14, 9, -11, 7, -6],
+              radius: 170,
+              polaroidRotation: 4,
+              highlightIndex: 9, // "dreams"
+              wordSpeed: 350,
+              pauseAfter: 3000
+            },
+            {
+              type: 'diary',
+              image: cherryBlossomImg,
+              words: ["Like", "cherry", "blossoms", "blooming", "in", "the", "mountain", "in", "the", "early", "spring", "🌸"],
+              wordSpeed: 320, // Slightly faster to match the song pacing here
+              highlightIndex: 2, // "blossoms"
+              highlightIndex: 10, // "spring"
+              pauseAfter: 3000
+            },
+            {
+              type: 'diary',
+              image: holdingHandsGif,
+              words: ["As", "we", "walked", "by", "the", "river", "and", "she", "softly", "took", "hold", "of", "my", "hand", "🤝"],
+              wordSpeed: 320,
+              highlightIndex: 12, // "hand"
+              pauseAfter: 2500
+            },
+            {
+              type: 'diary',
+              image: coupleGifUrl,
+              words: ["That's", "when", "I", "fell", "deep", "in", "love", "with", "the", "girl", "made", "in", "Japan", "💖"],
+              wordSpeed: 380, // Slowing down for the final dramatic line
+              highlightIndex: 12, // "Japan"
+              pauseAfter: 3500 // Longer pause before asking her out
+            }
+          ];
+
+          // --- DOODLE ENGINE ---
+          const getDoodlesForCurrentPage = () => {
+            if (phase === 'start') return [
+              { text: "Open me!", top: "20%", left: "65%", rotate: "15deg", size: "text-3xl" },
+              { text: "✨", top: "75%", left: "25%", rotate: "0deg", size: "text-4xl" },
+              { text: "psst...", top: "60%", left: "15%", rotate: "-15deg", size: "text-2xl" },
+              { text: "⬇️", top: "85%", left: "50%", rotate: "0deg", size: "text-4xl" }
+            ];
+            if (phase === 'lyrics') {
+              const sceneDoodles = [
+                // Scene 0: Boy
+                [
+                  { text: "kawaii ~", top: "15%", left: "70%", rotate: "10deg", size: "text-3xl" },
+                  { text: "🌸", top: "80%", left: "65%", rotate: "20deg", size: "text-4xl" },
+                  { text: "drawn by me ->", top: "45%", left: "5%", rotate: "-15deg", size: "text-xl" }
+                ],
+                // Scene 1: Girl
+                [
+                  { text: "dreamy...", top: "15%", left: "15%", rotate: "-15deg", size: "text-3xl" },
+                  { text: "✨", top: "10%", left: "80%", rotate: "0deg", size: "text-4xl" },
+                  { text: "so pretty 🥺", top: "85%", left: "60%", rotate: "5deg", size: "text-2xl" }
+                ],
+                // Scene 2: Cherry Blossoms
+                [
+                  { text: "spring time", top: "12%", left: "60%", rotate: "12deg", size: "text-2xl" },
+                  { text: "🌷", top: "60%", left: "80%", rotate: "-10deg", size: "text-4xl" },
+                  { text: "beautiful", top: "80%", left: "10%", rotate: "-20deg", size: "text-3xl" }
+                ],
+                // Scene 3: River / Hands
+                [
+                  { text: "warmth.", top: "75%", left: "15%", rotate: "-8deg", size: "text-3xl" },
+                  { text: "🪄", top: "15%", left: "75%", rotate: "15deg", size: "text-4xl" }
+                ],
+                // Scene 4: Falling in love
+                [
+                  { text: "my everything", top: "85%", left: "55%", rotate: "-10deg", size: "text-3xl" },
+                  { text: "💘", top: "10%", left: "20%", rotate: "5deg", size: "text-4xl" }
+                ]
+              ];
+              return sceneDoodles[sceneIndex] || [];
+            }
+            if (phase === 'proposal') return [
+              { text: "nervous...", top: "15%", left: "20%", rotate: "-10deg", size: "text-2xl" },
+              { text: "🥺", top: "75%", left: "15%", rotate: "0deg", size: "text-4xl" },
+              { text: "<- choose wisely", top: "70%", left: "65%", rotate: "15deg", size: "text-xl" },
+              { text: "💍", top: "20%", left: "80%", rotate: "20deg", size: "text-5xl" }
+            ];
+            if (phase === 'success') return [
+              { text: "BEST. DAY. EVER.", top: "12%", left: "15%", rotate: "-5deg", size: "text-2xl" },
+              { text: "🎉", top: "20%", left: "80%", rotate: "15deg", size: "text-4xl" },
+              { text: "can't wait!!", top: "85%", left: "65%", rotate: "-15deg", size: "text-3xl" },
+              { text: "🥰", top: "75%", left: "15%", rotate: "-10deg", size: "text-4xl" }
+            ];
+            return [];
+          };
+
+          const noButtonTexts = [
+            "No",
+            "Are you sure?",
+            "Really sure??",
+            "Pookie please...",
+            "Don't do this to me :(",
+            "I'm gonna cry 😭",
+            "You're breaking my heart!",
+            "Okay, I'm hiding the No button."
+          ];
+
+          const startExperience = () => {
+            if (audioRef.current) {
+              audioRef.current.volume = 0.5;
+              audioRef.current.play().catch(e => console.log("Audio play failed:", e));
+            }
+            setPhase('lyrics');
+            setSceneIndex(0);
+            setVisibleWordsCount(0);
+          };
+
+          useEffect(() => {
+            if (phase !== 'lyrics') return;
+
+            const currentScene = lyricsScenes[sceneIndex];
+            let timer;
+
+            if (visibleWordsCount < currentScene.words.length) {
+              timer = setTimeout(() => {
+                setVisibleWordsCount(prev => prev + 1);
+              }, currentScene.wordSpeed); 
+            } else {
+              timer = setTimeout(() => {
+                if (sceneIndex < lyricsScenes.length - 1) {
+                  setSceneIndex(prev => prev + 1);
+                  setVisibleWordsCount(0); 
+                } else {
+                  setPhase('proposal'); 
+                }
+              }, currentScene.pauseAfter); 
+            }
+
+            return () => clearTimeout(timer);
+          }, [phase, sceneIndex, visibleWordsCount]);
+
+          const handleNoClick = () => setNoCount(noCount + 1);
+          const getYesButtonSize = () => 1 + (noCount * 0.5);
+          const getNoButtonText = () => noButtonTexts[Math.min(noCount, noButtonTexts.length - 1)];
+
+          const currentPageKey = `${phase}-${sceneIndex}`;
+
+          return (
+            <div className="min-h-screen flex items-center justify-center p-4 bg-[#cce4f7] font-sans overflow-hidden selection:bg-blue-300 relative">
+              <style>{`
+                @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Kalam:wght@400;700&family=Dancing+Script:wght@700&family=Pacifico&display=swap');
+                
+                /* Typography */
+                .handwritten-font { font-family: 'Kalam', cursive; }
+                .cursive-font { font-family: 'Caveat', cursive; }
+                
+                /* HIGHLIGHT WORD EFFECT (Continuously changing) */
+                .highlight-font {
+                  font-size: 1.3em;
+                  text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.2);
+                  display: inline-block;
+                  margin-left: 4px;
+                  margin-right: 4px;
+                  animation: crazyHighlight 2.5s infinite;
+                }
+
+                @keyframes crazyHighlight {
+                  0%   { font-family: 'Dancing Script', cursive; color: #ff4d85; transform: rotate(-5deg) scale(1.1); }
+                  20%  { font-family: 'Pacifico', cursive; color: #a855f7; transform: rotate(4deg) scale(1.2); }
+                  40%  { font-family: 'Kalam', cursive; color: #3b82f6; transform: rotate(-3deg) scale(1.1); }
+                  60%  { font-family: 'Caveat', cursive; color: #10b981; transform: rotate(5deg) scale(1.25); }
+                  80%  { font-family: 'Georgia', serif; color: #f59e0b; transform: rotate(-6deg) scale(1.15); }
+                  100% { font-family: 'Dancing Script', cursive; color: #ff4d85; transform: rotate(-5deg) scale(1.1); }
+                }
+
+                /* The Blue Notebook Texture */
+                .notebook-page {
+                  background-color: #f7fbff;
+                  background-image: radial-gradient(#a3c2db 1px, transparent 1px);
+                  background-size: 24px 24px;
+                  background-position: 12px 12px;
+                  box-shadow: 10px 15px 30px rgba(0,0,0,0.1), inset 30px 0 25px rgba(0,0,0,0.03);
+                  border-radius: 4px 16px 16px 4px;
+                  position: relative;
+                }
+                
+                /* Red margin line */
+                .notebook-page::before {
+                  content: '';
+                  position: absolute;
+                  top: 0; bottom: 0; left: 60px;
+                  width: 2px;
+                  background-color: rgba(255, 120, 140, 0.4);
+                  z-index: 1;
+                }
+
+                /* AESTHETIC BOTTOM WAVES */
+                .wave-anim { animation: waveSlide 6s linear infinite; }
+                .wave-anim-reverse { animation: waveSlideReverse 9s linear infinite; }
+                @keyframes waveSlide {
+                  0% { transform: translateX(0); }
+                  100% { transform: translateX(-50%); }
+                }
+                @keyframes waveSlideReverse {
+                  0% { transform: translateX(-50%); }
+                  100% { transform: translateX(0); }
+                }
+
+                /* Spiral Binding Animation & Styles */
+                .ring-container {
+                  position: absolute;
+                  left: -12px;
+                  top: 20px;
+                  bottom: 20px;
+                  display: flex;
+                  flex-direction: column;
+                  justify-content: space-between;
+                  z-index: 50;
+                }
+                .ring {
+                  width: 35px;
+                  height: 8px;
+                  background: linear-gradient(to bottom, #d1d5db, #f3f4f6, #9ca3af);
+                  border: 1px solid #6b7280;
+                  border-radius: 10px;
+                  box-shadow: 2px 3px 5px rgba(0,0,0,0.2);
+                  position: relative;
+                }
+                .hole {
+                  width: 14px;
+                  height: 14px;
+                  background: #cce4f7;
+                  border-radius: 50%;
+                  position: absolute;
+                  right: -8px;
+                  top: -4px;
+                  box-shadow: inset 2px 2px 4px rgba(0,0,0,0.2);
+                }
+
+                /* Cutouts & Paper elements */
+                .paper-tile {
+                  background-color: #fff;
+                  box-shadow: 1px 3px 6px rgba(0, 0, 0, 0.08);
+                  border: 1px solid rgba(0,0,0,0.04);
+                }
+                
+                .masking-tape {
+                  position: absolute;
+                  background-color: rgba(255, 255, 255, 0.6);
+                  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                  backdrop-filter: blur(2px);
+                  z-index: 20;
+                }
+
+                /* Image Zoom Edit Effect */
+                .image-container { overflow: hidden; }
+                .cinematic-zoom { animation: slowZoom 8s ease-out forwards; }
+                @keyframes slowZoom { 0% { transform: scale(1); } 100% { transform: scale(1.15); } }
+
+                /* 3D PAGE TURN ANIMATION */
+                .page-flip {
+                  animation: flipPageIn 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+                  transform-origin: 20px center; 
+                  transform-style: preserve-3d;
+                  width: 100%;
+                  height: 100%;
+                  position: absolute;
+                  top: 0;
+                  left: 0;
+                }
+
+                @keyframes flipPageIn {
+                  0% { transform: perspective(1200px) rotateY(-90deg); opacity: 0; }
+                  100% { transform: perspective(1200px) rotateY(0deg); opacity: 1; }
+                }
+
+                /* Pop In Animation for Text */
+                @keyframes popIn {
+                  0% { transform: scale(0.6) translateY(10px); opacity: 0; }
+                  60% { transform: scale(1.1) translateY(-2px); opacity: 1; }
+                  100% { transform: scale(1) translateY(0); opacity: 1; }
+                }
+                .pop-in { animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+
+                /* Doodle Styling */
+                .doodle-mark {
+                  color: #4e7296; 
+                  opacity: 0.45;
+                  pointer-events: none;
+                  z-index: 5; 
+                }
+
+              `}</style>
+
+              {/* Background Soft Blue Floating Stars */}
+              <div className="fixed inset-0 pointer-events-none z-0">
+                {[...Array(15)].map((_, i) => (
+                  <div
+                    key={i}
+                    className="absolute text-white/40 font-bold pop-in"
+                    style={{
+                      left: `${Math.random() * 100}vw`,
+                      top: `${Math.random() * 100}vh`,
+                      fontSize: `${Math.random() * 20 + 10}px`,
+                      animation: `popIn ${Math.random() * 4 + 2}s infinite alternate`
+                    }}
+                  >
+                    ✦
+                  </div>
+                ))}
+              </div>
+
+              <audio ref={audioRef} src={audioUrl} loop />
+
+              {/* MAIN NOTEBOOK CONTAINER */}
+              <div className="relative w-full max-w-[600px] h-[650px] md:h-[700px] notebook-page z-10 overflow-hidden md:overflow-visible shadow-2xl">
+                
+                {/* AESTHETIC WAVES GRAPHICS */}
+                <div className="absolute bottom-0 left-0 w-full overflow-hidden z-0 pointer-events-none opacity-60 rounded-br-2xl md:rounded-br-none md:rounded-b-2xl">
+                    <svg className="relative block w-[200%] h-[100px] md:h-[130px] wave-anim" viewBox="0 0 1200 120" preserveAspectRatio="none">
+                        <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V120H0V95.8C59.71,118,130.85,121.72,201.2,112.5,242.43,107.12,283.58,85.22,321.39,56.44Z" fill="#ffb7c5"></path>
+                    </svg>
+                    <svg className="absolute bottom-0 left-0 block w-[200%] h-[80px] md:h-[100px] wave-anim-reverse" viewBox="0 0 1200 120" preserveAspectRatio="none">
+                        <path d="M321.39,56.44c58-10.79,114.16-30.13,172-41.86,82.39-16.72,168.19-17.73,250.45-.39C823.78,31,906.67,72,985.66,92.83c70.05,18.48,146.53,26.09,214.34,3V120H0V95.8C59.71,118,130.85,121.72,201.2,112.5,242.43,107.12,283.58,85.22,321.39,56.44Z" fill="#a3c2db" opacity="0.6"></path>
+                    </svg>
+                </div>
+
+                {/* The Spiral Binding Rings */}
+                <div className="ring-container py-6">
+                  {[...Array(14)].map((_, i) => (
+                    <div key={i} className="ring">
+                      <div className="hole"></div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* --- THE FLIPPING PAGE CONTENT --- */}
+                <div key={currentPageKey} className="page-flip flex flex-col items-center">
+                  
+                  {/* Render Unique Doodles */}
+                  {getDoodlesForCurrentPage().map((doodle, i) => (
+                    <div 
+                      key={i} 
+                      className={`absolute doodle-mark handwritten-font font-bold ${doodle.size}`}
+                      style={{ 
+                        top: doodle.top, 
+                        left: doodle.left, 
+                        transform: `rotate(${doodle.rotate})` 
+                      }}
+                    >
+                      {doodle.text}
+                    </div>
+                  ))}
+
+                  {/* CONTENT: START SCREEN */}
+                  {phase === 'start' && (
+                    <div className="flex-1 flex flex-col items-center justify-center w-full px-4 md:px-12 md:pl-20 text-center ml-4 md:ml-0 h-full relative z-10">
+                      <h1 className="text-4xl md:text-5xl font-bold text-[#4e7296] cursive-font mb-4">
+                        My Journal 📖
+                      </h1>
+                      <p className="text-[#6d8fae] handwritten-font text-xl md:text-2xl mb-10">A very special entry just for you...</p>
+                      <button 
+                        onClick={startExperience}
+                        className="px-6 md:px-8 py-3 bg-[#80aee0] hover:bg-[#6c98c9] text-white handwritten-font text-2xl md:text-3xl rounded-lg shadow-lg transform transition hover:scale-105 active:scale-95 relative z-40"
+                      >
+                        Read Entry ✨
+                      </button>
+                    </div>
+                  )}
+
+                  {/* CONTENT: THE LYRICS & SCENES */}
+                  {phase === 'lyrics' && (
+                    <div className="flex-1 flex flex-col items-center justify-center w-full relative pl-12 md:pl-16 pr-2 md:pr-4 h-full z-10">
+                      
+                      {/* SCENE TYPE: Circular Scrapbook Style */}
+                      {lyricsScenes[sceneIndex].type === 'scrapbook' && (
+                        <div className="relative flex items-center justify-center w-[300px] h-[300px] md:w-[450px] md:h-[450px]">
+                          
+                          {/* Center Image */}
+                          <div 
+                            className="relative z-10 flex flex-col items-center bg-white p-2 md:p-3 shadow-md image-container"
+                            style={{ transform: `rotate(${lyricsScenes[sceneIndex].polaroidRotation}deg)` }}
+                          >
+                            <div className="masking-tape top-[-10px] left-1/2 -translate-x-1/2 rotate-[-4deg] w-16 md:w-20 h-5 md:h-6"></div>
+                            <img 
+                              src={lyricsScenes[sceneIndex].image} 
+                              alt="Memory" 
+                              className="w-32 h-32 md:w-48 md:h-48 object-cover filter contrast-110 cinematic-zoom"
+                            />
+                          </div>
+
+                          {/* Circular Words */}
+                          {lyricsScenes[sceneIndex].words.map((word, index) => {
+                            if (index >= visibleWordsCount) return null;
+                            const angle = (index / lyricsScenes[sceneIndex].words.length) * 2 * Math.PI - Math.PI / 2;
+                            const isMobile = window.innerWidth < 768;
+                            const activeRadius = isMobile ? lyricsScenes[sceneIndex].radius * 0.75 : lyricsScenes[sceneIndex].radius;
+                            const x = Math.cos(angle) * activeRadius;
+                            const y = Math.sin(angle) * activeRadius;
+                            
+                            // Check if this is the highlighted word
+                            const isHighlight = index === lyricsScenes[sceneIndex].highlightIndex;
+                            
+                            return (
+                              <div
+                                key={`word-${sceneIndex}-${index}`} 
+                                className="absolute z-20 flex items-center justify-center select-none"
+                                style={{ transform: `translate(${x}px, ${y}px)` }}
+                              >
+                                <div className="paper-tile px-2 py-0.5 md:px-3 md:py-1 pop-in" style={{ transform: `rotate(${lyricsScenes[sceneIndex].rotations[index]}deg)` }}>
+                                  <span className={`handwritten-font text-xl md:text-3xl ${isHighlight ? 'highlight-font' : 'text-[#3b5978]'}`}>
+                                    {word}
+                                  </span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {/* SCENE TYPE: Diary Entry Style */}
+                      {lyricsScenes[sceneIndex].type === 'diary' && (
+                        <div className="flex flex-col items-center justify-start w-full h-full pt-10 md:pt-16 px-2 md:px-4">
+                          <div className="relative p-2 bg-white rounded-xl mb-6 md:mb-10 w-full max-w-[260px] md:max-w-[320px] image-container shadow-md">
+                            <div className="masking-tape top-[-8px] right-[10px] rotate-[15deg] w-10 md:w-12 h-5 md:h-6"></div>
+                            <div className="masking-tape bottom-[-8px] left-[10px] rotate-[-15deg] w-10 md:w-12 h-5 md:h-6"></div>
+                            <img 
+                              src={lyricsScenes[sceneIndex].image} 
+                              alt="Animation" 
+                              className="w-full h-auto object-cover rounded-lg cinematic-zoom"
+                            />
+                          </div>
+
+                          <div className="w-full text-left pl-2 md:pl-4 leading-[2rem] md:leading-[2.5rem]">
+                            <p className="cursive-font text-3xl md:text-5xl text-[#3b5978] font-bold">
+                              {lyricsScenes[sceneIndex].words.map((word, index) => {
+                                if (index >= visibleWordsCount) return null;
+                                
+                                // Check if this is the highlighted word
+                                const isHighlight = index === lyricsScenes[sceneIndex].highlightIndex;
+                                
+                                return (
+                                  <span key={index} className={`inline-block mr-2 md:mr-3 pop-in ${isHighlight ? 'highlight-font' : ''}`}>
+                                    {word}
+                                  </span>
+                                );
+                              })}
+                            </p>
+                          </div>
+                        </div>
+                      )}
+
+                      <button 
+                        onClick={() => setPhase('proposal')}
+                        className="absolute bottom-4 right-4 md:bottom-6 md:right-6 text-[#80aee0] hover:text-[#5a86b5] cursive-font text-xl md:text-2xl font-bold transition z-40"
+                      >
+                        skip ➡
+                      </button>
+                      
+                      {/* Scene counter at bottom left */}
+                      <div className="absolute bottom-4 left-16 text-[#80aee0]/60 handwritten-font text-lg z-40">
+                        Page {sceneIndex + 1} of {lyricsScenes.length}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* CONTENT: THE PROPOSAL */}
+                  {phase === 'proposal' && (
+                    <div className="flex-1 flex flex-col items-center justify-center w-full px-6 md:px-12 pl-16 md:pl-20 h-full relative z-40">
+                      <h2 className="text-3xl md:text-5xl font-bold cursive-font text-[#4e7296] mb-8 md:mb-10 text-center leading-relaxed">
+                        So... <br/>
+                        Would you like to go on a date with me? 🥺
+                      </h2>
+                      
+                      <div className="flex flex-col items-center justify-center gap-4 md:gap-6 mt-4 w-full relative h-48 md:h-40">
+                        <button
+                          onClick={() => setPhase('success')}
+                          style={{ 
+                            transform: `scale(${getYesButtonSize()})`,
+                            zIndex: noCount > 3 ? 50 : 10 
+                          }}
+                          className="px-8 md:px-10 py-2 md:py-3 bg-[#80aee0] text-white handwritten-font text-2xl md:text-3xl rounded-xl shadow-lg transition-all duration-300 whitespace-nowrap"
+                        >
+                          YES! 🥰
+                        </button>
+
+                        {noCount < 8 && (
+                          <button
+                            onClick={handleNoClick}
+                            style={{ 
+                              transform: `scale(${1 - noCount * 0.1})`,
+                              opacity: Math.max(0.3, 1 - noCount * 0.15)
+                            }}
+                            className="px-5 md:px-6 py-1.5 md:py-2 border-2 border-[#80aee0] text-[#80aee0] handwritten-font text-xl md:text-2xl rounded-xl transition-all duration-300 hover:bg-[#e0f0ff] absolute mt-32 md:mt-40 whitespace-nowrap"
+                          >
+                            {getNoButtonText()}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* CONTENT: SUCCESS SCREEN */}
+                  {phase === 'success' && (
+                    <div className="flex-1 flex flex-col items-center justify-center w-full px-6 md:px-12 pl-16 md:pl-20 text-center h-full relative z-40">
+                      <img 
+                        src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3ZveWd2NGp3MXhhZTNqNWh2bzh4M3F5M2x3bHMyNWJtbDJ5YnNsayZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/VzQ9PUdifClRm/giphy.gif" 
+                        alt="Cute bears hugging" 
+                        className="w-48 md:w-56 h-auto object-cover rounded-2xl shadow-md border-4 border-white mb-6"
+                      />
+                      <h2 className="text-4xl md:text-5xl cursive-font font-bold text-[#4e7296] mb-2">
+                        YAYYYY! 🎉
+                      </h2>
+                      <p className="text-xl md:text-2xl handwritten-font text-[#6d8fae]">
+                        I can't wait! <br/> See you soon, beautiful! 💙
+                      </p>
+                    </div>
+                  )}
+
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
